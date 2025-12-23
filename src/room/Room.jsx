@@ -12,8 +12,8 @@ const Room = () => {
 
     if (skilledName || learnerName) {
       const userName = skilledName || learnerName;
-      const appID = 79135;
-      const serverSecret = "62ace8f43ba236fa835d1528bbbe5222";
+      const appID = 19141579;
+      const serverSecret = "cdb26c1b7f9f99e7cb2eebdb14b1ee38";
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(appID, serverSecret, roomId, Date.now().toString(), userName);
 
       const zp = ZegoUIKitPrebuilt.create(kitToken);

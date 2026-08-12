@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -161,21 +161,27 @@ const Room1 = () => {
         }
     }, [startedAt, isFreeTime, balance, warning]);
 
-    const endSession = async () => {
-        if (bookingIdRef.current) {
-            try {
-                await updateDoc(doc(db, 'Bookings', bookingIdRef.current), { status: 'completed', sessionEndedAt: Date.now() });
-            } catch (error) {
-                console.log('Error ending session:', error);
-            }
+    const endSession = useCallback(async () => {
+    if (bookingIdRef.current) {
+        try {
+            await updateDoc(
+                doc(db, 'Bookings', bookingIdRef.current),
+                {
+                    status: 'completed',
+                    sessionEndedAt: Date.now()
+                }
+            );
+        } catch (error) {
+            console.log('Error ending session:', error);
         }
+    }
 
-        navigate('/learner/home');
-    };
+    navigate('/learner/home');
+}, [navigate]);
 
-    useEffect(() => {
-        if (warning && now >= graceEnd) endSession();
-    }, [warning, now, graceEnd]);
+   useEffect(() => {
+    if (warning && now >= graceEnd) endSession();
+}, [warning, now, graceEnd, endSession]);
 
     const graceSecondsLeft = Math.max(0, Math.ceil((graceEnd - now) / 1000));
     const showWarning = warning && !isFreeTime && balance < BLOCK_COST;

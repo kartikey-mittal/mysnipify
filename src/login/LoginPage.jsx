@@ -383,16 +383,19 @@ const LoginPage = () => {
       transition: 'all 0.15s ease',
       boxSizing: 'border-box',
     },
-    demoButtonLearner: {
-      backgroundColor: '#EFF6FF',
-      borderColor: '#92C1FF',
-      color: '#3B82F6',
-    },
-    demoButtonSkilled: {
-      backgroundColor: '#FDF2F8',
-      borderColor: '#EA78B7',
-      color: '#DB2777',
-    },
+   
+
+     demoButtonLearner: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#92C1FF',
+    color: '#fff',
+  },
+
+  demoButtonSkilled: {
+    backgroundColor: '#db2777',
+    borderColor: '#EA78B7',
+    color: '#fff',
+  },
     demoHint: {
       display: 'flex',
       alignItems: 'left',

@@ -18,21 +18,19 @@ import {
   FaToolbox,
   FaArrowRight,
   FaCheck,
+  FaBolt,
 } from 'react-icons/fa';
 
 const LoginPage = () => {
   const [isLeftSectionVisible, setIsLeftSectionVisible] = useState(
     window.innerWidth > 780
   );
-
   useEffect(() => {
     const handleResize = () => {
       setIsLeftSectionVisible(window.innerWidth > 780);
     };
-
     window.addEventListener('resize', handleResize);
     handleResize();
-
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -46,32 +44,26 @@ const LoginPage = () => {
     setSelectedButton(buttonName);
   };
 
-  const handleContinueClick = async () => {
-    const email = enteredEmail.trim();
-    const password = enteredPassword.trim();
-
-    if (!selectedButton || !email || !password) return;
+  const attemptLogin = async (role, emailInput, passwordInput) => {
+    const email = emailInput.trim();
+    const password = passwordInput.trim();
+    if (!role || !email || !password) return;
 
     setSubmitting(true);
-
     try {
-      if (selectedButton === 'learner') {
+      if (role === 'learner') {
         const q = query(
           collection(db, 'Learner'),
           where('Email', '==', email),
           where('Password', '==', password)
         );
-
         const querySnapshot = await getDocs(q);
-
         if (!querySnapshot.empty) {
           const learnerDoc = querySnapshot.docs[0];
           const learnerData = learnerDoc.data();
-
           localStorage.setItem('LearnerName', learnerData.Name);
           localStorage.setItem('LearnerEmail', learnerData.Email);
           localStorage.setItem('LearnerId', learnerDoc.id);
-
           if (
             learnerData.creditBalance === undefined ||
             learnerData.creditBalance === null
@@ -80,33 +72,27 @@ const LoginPage = () => {
               creditBalance: 500,
             });
           }
-
           window.location.href = '/learner/home';
         } else {
           alert('No matching record found for Learner');
         }
-      } else if (selectedButton === 'skilled') {
+      } else if (role === 'skilled') {
         const q = query(
           collection(db, 'Skilled'),
           where('Email', '==', email),
           where('Password', '==', password)
         );
-
         const querySnapshot = await getDocs(q);
-
         if (!querySnapshot.empty) {
           const skilledDoc = querySnapshot.docs[0];
           const skilledData = skilledDoc.data();
-
           localStorage.setItem('SkilledName', skilledData.Name);
           localStorage.setItem('SkilledEmail', skilledData.Email);
           localStorage.setItem('SkilledId', skilledDoc.id);
-
           localStorage.setItem(
             'SkilledSkillsArray',
             JSON.stringify(skilledData.selectedSkills || [])
           );
-
           window.location.href = '/skilled/home';
         } else {
           alert('No matching record found for Tutor');
@@ -117,6 +103,24 @@ const LoginPage = () => {
       alert('Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleContinueClick = () => {
+    attemptLogin(selectedButton, enteredEmail, enteredPassword);
+  };
+
+  const handleDemoLogin = (role) => {
+    if (role === 'learner') {
+      setSelectedButton('learner');
+      setEnteredEmail('user@gmail.com');
+      setEnteredPassword('user');
+      attemptLogin('learner', 'user@gmail.com', 'user');
+    } else if (role === 'skilled') {
+      setSelectedButton('skilled');
+      setEnteredEmail('skilled@gmail.com');
+      setEnteredPassword('skilled');
+      attemptLogin('skilled', 'skilled@gmail.com', 'skilled');
     }
   };
 
@@ -134,7 +138,6 @@ const LoginPage = () => {
       width: '100%',
       fontFamily: 'DMM',
     },
-
     leftSection: {
       background: `
         radial-gradient(
@@ -170,7 +173,6 @@ const LoginPage = () => {
       padding: 40,
       boxSizing: 'border-box',
     },
-
     leftGlow: {
       position: 'absolute',
       width: 420,
@@ -182,26 +184,21 @@ const LoginPage = () => {
       left: -100,
       pointerEvents: 'none',
     },
-
     logo: {
       height: 'auto',
       maxWidth: '55%',
       position: 'relative',
     },
-
     logoMobile: {
       height: 60,
       maxWidth: '70%',
       marginTop: 24,
       marginBottom: 10,
     },
-
     rightSection: {
       display: 'flex',
       flexDirection: 'column',
-
       backgroundColor: '#F5F3FE',
-
       backgroundImage: `
         repeating-linear-gradient(
           0deg,
@@ -218,13 +215,11 @@ const LoginPage = () => {
           rgba(59, 130, 246, 0.04) 43px
         )
       `,
-
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '100vh',
       boxSizing: 'border-box',
     },
-
     formContainer: {
       width: '100%',
       maxWidth: 460,
@@ -238,25 +233,21 @@ const LoginPage = () => {
       boxShadow: '0 8px 15px rgba(88,19,234,0.08)',
       boxSizing: 'border-box',
     },
-
     headerBlock: {
       marginBottom: 8,
     },
-
     loginTitle: {
       color: '#111827',
       fontSize: 27,
       fontWeight: 700,
       textAlign: 'left',
     },
-
     loginSubtitle: {
       color: '#7D716A',
       fontSize: 14.5,
       marginTop: 5,
       textAlign: 'left',
     },
-
     roleLabel: {
       color: '#7D716A',
       fontSize: 13.5,
@@ -264,13 +255,11 @@ const LoginPage = () => {
       marginBottom: 9,
       textAlign: 'left',
     },
-
     roleTabs: {
       display: 'flex',
       gap: 10,
       marginBottom: 6,
     },
-
     roleCard: {
       flex: 1,
       display: 'flex',
@@ -284,33 +273,28 @@ const LoginPage = () => {
       transition: 'all 0.15s ease',
       boxSizing: 'border-box',
     },
-
     roleCardLearner: {
       backgroundColor: '#EFF6FF',
       borderColor: '#DBEAFE',
       color: '#374151',
     },
-
     roleCardLearnerActive: {
       backgroundColor: '#3B82F6',
       borderColor: '#3B82F6',
       color: 'white',
       boxShadow: '0 4px 14px rgba(59,130,246,0.28)',
     },
-
     roleCardSkilled: {
       backgroundColor: '#FDF2F8',
       borderColor: '#FCE7F3',
       color: '#374151',
     },
-
     roleCardSkilledActive: {
       backgroundColor: '#DB2777',
       borderColor: '#DB2777',
       color: 'white',
       boxShadow: '0 4px 14px rgba(219,39,119,0.28)',
     },
-
     roleIconWrap: {
       width: 34,
       height: 34,
@@ -320,7 +304,6 @@ const LoginPage = () => {
       justifyContent: 'center',
       flexShrink: 0,
     },
-
     fieldLabel: {
       color: '#7D716A',
       fontSize: 13.5,
@@ -328,14 +311,12 @@ const LoginPage = () => {
       marginBottom: 7,
       textAlign: 'left',
     },
-
     inputWrap: {
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
       width: '100%',
     },
-
     inputIcon: {
       position: 'absolute',
       left: 14,
@@ -343,7 +324,6 @@ const LoginPage = () => {
       color: '#9CA3AF',
       pointerEvents: 'none',
     },
-
     inputField: {
       borderRadius: 11,
       padding: '13px 42px 13px 38px',
@@ -355,7 +335,6 @@ const LoginPage = () => {
       outline: 'none',
       boxSizing: 'border-box',
     },
-
     eyeIcon: {
       position: 'absolute',
       right: 14,
@@ -365,7 +344,6 @@ const LoginPage = () => {
       display: 'flex',
       alignItems: 'center',
     },
-
     continueButton: {
       borderRadius: 12,
       marginTop: 28,
@@ -384,7 +362,48 @@ const LoginPage = () => {
       width: '100%',
       boxSizing: 'border-box',
     },
-
+    demoRow: {
+      display: 'flex',
+      gap: 5,
+      marginTop: 12,
+    },
+    demoButton: {
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      padding: '10px 0px',
+      borderRadius: 11,
+      border: '0.9px solid',
+      cursor: 'pointer',
+      fontFamily: 'DMM',
+      fontSize: 14.5,
+      fontWeight: 450,
+      transition: 'all 0.15s ease',
+      boxSizing: 'border-box',
+    },
+    demoButtonLearner: {
+      backgroundColor: '#EFF6FF',
+      borderColor: '#92C1FF',
+      color: '#3B82F6',
+    },
+    demoButtonSkilled: {
+      backgroundColor: '#FDF2F8',
+      borderColor: '#EA78B7',
+      color: '#DB2777',
+    },
+    demoHint: {
+      display: 'flex',
+      alignItems: 'left',
+      gap: 6,
+      fontSize: 18
+    ,
+      color: '#35bd3c',
+      marginTop: 10,
+      justifyContent: 'center',
+     
+    },
     termsText: {
       fontSize: 11.5,
       color: '#9CA3AF',
@@ -396,12 +415,10 @@ const LoginPage = () => {
 
   return (
     <div style={styles.container}>
-
       {/* Left brand panel */}
       {isLeftSectionVisible && (
         <div style={styles.leftSection}>
           <div style={styles.leftGlow} />
-
           <img
             src={Logo}
             alt="Logo"
@@ -409,7 +426,6 @@ const LoginPage = () => {
           />
         </div>
       )}
-
       {/* Right login panel */}
       <div
         style={{
@@ -417,7 +433,6 @@ const LoginPage = () => {
           width: isLeftSectionVisible ? '44%' : '100%',
         }}
       >
-
         {/* Mobile logo */}
         {!isLeftSectionVisible && (
           <img
@@ -426,27 +441,21 @@ const LoginPage = () => {
             style={styles.logoMobile}
           />
         )}
-
         <div style={styles.formContainer}>
-
           {/* Header */}
           <div style={styles.headerBlock}>
             <div style={styles.loginTitle}>
               Welcome back
             </div>
-
             <div style={styles.loginSubtitle}>
               Ready to continue your journey :)
             </div>
           </div>
-
           {/* Role */}
           <div style={styles.roleLabel}>
             I want to login as
           </div>
-
           <div style={styles.roleTabs}>
-
             {/* Learner */}
             <div
               style={{
@@ -476,7 +485,6 @@ const LoginPage = () => {
                   }}
                 />
               </div>
-
               <div
                 style={{
                   display: 'flex',
@@ -492,7 +500,6 @@ const LoginPage = () => {
                   Learner
                 </span>
               </div>
-
               {selectedButton === 'learner' && (
                 <FaCheck
                   style={{
@@ -502,7 +509,6 @@ const LoginPage = () => {
                 />
               )}
             </div>
-
             {/* Tutor */}
             <div
               style={{
@@ -532,7 +538,6 @@ const LoginPage = () => {
                   }}
                 />
               </div>
-
               <div
                 style={{
                   display: 'flex',
@@ -548,7 +553,6 @@ const LoginPage = () => {
                   Tutor
                 </span>
               </div>
-
               {selectedButton === 'skilled' && (
                 <FaCheck
                   style={{
@@ -558,17 +562,13 @@ const LoginPage = () => {
                 />
               )}
             </div>
-
           </div>
-
           {/* Email */}
           <div style={styles.fieldLabel}>
             Email
           </div>
-
           <div style={styles.inputWrap}>
             <FaEnvelope style={styles.inputIcon} />
-
             <input
               type="email"
               style={styles.inputField}
@@ -579,15 +579,12 @@ const LoginPage = () => {
               }
             />
           </div>
-
           {/* Password */}
           <div style={styles.fieldLabel}>
             Password
           </div>
-
           <div style={styles.inputWrap}>
             <FaLock style={styles.inputIcon} />
-
             <input
               type={showPassword ? 'text' : 'password'}
               style={styles.inputField}
@@ -597,7 +594,6 @@ const LoginPage = () => {
                 setEnteredPassword(event.target.value)
               }
             />
-
             <div
               style={styles.eyeIcon}
               onClick={() =>
@@ -607,7 +603,6 @@ const LoginPage = () => {
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </div>
           </div>
-
           {/* Continue */}
           <button
             style={{
@@ -621,7 +616,6 @@ const LoginPage = () => {
             disabled={isContinueButtonDisabled}
           >
             {submitting ? 'Logging in...' : 'Continue'}
-
             {!submitting && (
               <FaArrowRight
                 style={{
@@ -631,12 +625,32 @@ const LoginPage = () => {
             )}
           </button>
 
-          {/* Terms */}
-          <div style={styles.termsText}>
-            By continuing, you agree to Snipify's Terms of
-            Service and Privacy Policy.
+          {/* Demo login buttons */}
+          <div style={styles.demoRow}>
+            
+            <button
+              style={{ ...styles.demoButton, ...styles.demoButtonLearner }}
+              onClick={() => handleDemoLogin('learner')}
+              disabled={submitting}
+            >
+              <FaGraduationCap style={{ fontSize: 13 }} />
+              Demo Login as Learner
+            </button>
+            <button
+              style={{ ...styles.demoButton, ...styles.demoButtonSkilled }}
+              onClick={() => handleDemoLogin('skilled')}
+              disabled={submitting}
+            >
+              <FaToolbox style={{ fontSize: 13 }} />
+              Demo Login as Tutor
+            </button>
+          </div>
+          <div style={styles.demoHint}>
+            {/* <FaBolt style={{ fontSize: 10 }} /> */}
+           <i>Instantly SIGN-IN with a sample account</i>
           </div>
 
+         
         </div>
       </div>
     </div>

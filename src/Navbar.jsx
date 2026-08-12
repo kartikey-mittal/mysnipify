@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
 import Logo from './assets/snipify_1.png'
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faRightFromBracket,
+  faUser
+} from '@fortawesome/free-solid-svg-icons';
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const navbarStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -26,51 +33,110 @@ const Navbar = () => {
     justifyContent: 'center',
   };
 
-  const buttonStyle = (color) => ({
-    width: '90px',
+  const buttonStyle = (color, isActive) => ({
+    width: 'auto',
     height: '38px',
     backgroundColor: color,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    borderBottom: '2px solid transparent',
+    borderBottom: `2.5px solid ${isActive ? '#5813EA' : 'transparent'}`,
+    paddingLeft: 12,
+    paddingRight: 12,
     marginRight:10,
     Fontfamily:'DMM',
-    fontSize: 20,
-    fontWeight: 600,
+    fontSize: 17,
+    fontWeight: isActive ? 700 : 600,
+    color: isActive ? '#5813EA' : '#000',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.2s ease',
   });
 
-  const [activeButton, setActiveButton] = useState('red');
-  
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/');
+  };
+
+  const isActive = (key) => {
+    if (key === 'red') return location.pathname === '/skilled/home';
+    if (key === 'green') return location.pathname === '/skilled/availability';
+    if (key === 'pink') return location.pathname === '/skilled/bookedsessions';
+    return false;
+  };
+
   const handleSessionsClick = () => {
-    setActiveButton('pink');
-    // Navigate to 'skilled/sessions'
-    navigate('/skilled/sessions');
+    // Navigate to 'skilled/bookedsessions'
+    navigate('/skilled/bookedsessions');
+  };
+  const handleAvailabilityClick = () => {
+    navigate('/skilled/availability');
   };
 
   return (
     <div style={navbarStyle}>
-      <div style={blueContainerStyle}>
-        <img src={Logo} alt="Logo" style={{height:'100%'}} /> {/* Stretch the SVG logo */}
+      <div style={blueContainerStyle} onClick={() => navigate('/skilled/home')}>
+        <img src={Logo} alt="Logo" style={{height:'100%', cursor:'pointer'}} />
       </div>
-      <div 
-        style={{...buttonStyle('white'), marginLeft: 'auto', borderBottomColor: activeButton === 'red' ? '#5813EA' : 'transparent'}}
-        onClick={() => setActiveButton('red')}
+      <div
+        style={{...buttonStyle('white', isActive('red')), marginLeft: 'auto'}}
+        onClick={() => navigate('/skilled/home')}
       >
         Instant
       </div>
-      <div 
-        style={{...buttonStyle('white'), borderBottomColor: activeButton === 'pink' ? '#5813EA' : 'transparent'}}
-        onClick={() => { setActiveButton('pink'); handleSessionsClick(); }}
+      <div
+        style={{...buttonStyle('white', isActive('green'))}}
+        onClick={handleAvailabilityClick}
+      >
+        Manage Availability
+      </div>
+      <div
+        style={{...buttonStyle('white', isActive('pink'))}}
+        onClick={handleSessionsClick}
       >
         Sessions
       </div>
-      <div 
-        style={{backgroundColor:'#D9D9D9',borderRadius:'100%',height:40,width:40,marginRight:20, borderBottomColor: activeButton === 'orange' ? 'black' : 'transparent',cursor:'pointer'}}
-        
-      >
-       
+      <div style={{ position: 'relative' }}>
+       <div
+  onClick={() => setDropdownOpen(!dropdownOpen)}
+  style={{
+    backgroundColor: '#FCE7F3',
+    border: '1px solid #FBCFE8',
+    borderRadius: '50%',
+    height: 40,
+    width: 40,
+    marginRight: 20,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    boxSizing: 'border-box',
+  }}
+>
+  <FontAwesomeIcon
+    icon={faUser}
+    style={{
+      fontSize: 16,
+      color: '#DB2777',
+    }}
+  />
+</div>
+        {dropdownOpen && (
+          <div style={{ position: 'absolute', right: 20, top: 55, zIndex: 200, backgroundColor: 'white', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', border: '1px solid #E5E7EB', minWidth: 150, fontFamily: 'DMM', overflow: 'hidden' }}>
+            <div
+              onClick={handleLogout}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', cursor: 'pointer', color: '#111827', fontSize: 14, fontWeight: 400, transition: 'all 0.2s ease' }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = '#F3F4F6')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
+            >
+              <FontAwesomeIcon icon={faRightFromBracket} style={{ fontSize: 13 }} />
+              Logout
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

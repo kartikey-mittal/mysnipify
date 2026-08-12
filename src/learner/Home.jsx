@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBolt, faCalendarAlt, faVideo } from '@fortawesome/free-solid-svg-icons';
+
+
 import Navbar1 from '../Navbar1';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
@@ -41,7 +45,18 @@ const Home = () => {
     const [uploadStatus, setUploadStatus] = useState({ success: false, fileName: '' });
     const [textInput, setTextInput] = useState('');
     const [imageUrl, setImageUrl] = useState('');
+    const [activeTab, setActiveTab] = useState('instant');
+    const [tutors, setTutors] = useState([]);
     const isContinueButtonDisabled = !textInput.trim();
+
+    useEffect(() => {
+        getDocs(collection(db, 'Skilled'))
+            .then((snap) => {
+                const list = snap.docs.slice(0, 12).map((d) => ({ id: d.id, ...d.data() }));
+                setTutors(list);
+            })
+            .catch((err) => console.error('Error loading tutors:', err));
+    }, []);
 
     // Calculate opacity based on whether there is text in the input
     // const continueButtonOpacity = isContinueButtonDisabled ? 0.5 : 1
@@ -148,41 +163,41 @@ const Home = () => {
             console.log('Matched documents:', fcmtokendata);
 
             // ------------------------fcm Notification-------------------
-            try {
-                const response = await axios.post(
-                    'https://fcm.googleapis.com/fcm/send',
-                    {
-                        registration_ids: fcmtokendata,
-                        notification: {
-                            title: 'Question: '+textInput,
-                            body: 'Asked by '+learnerName,
-                        }
-                    },
-                    {
-                        headers: {
-                            Authorization: 'key=AAAALbx6OSY:APA91bE-XoNsHHFbu9VxAY826Fwv4QJ2Z6IVjxJqnZZkvDsZkcQSeZOhCrKZHDZe7SJa-CpCZJ_PlawzXrK1BQheWT4Lj28XNuhK2a5ZDULkDoqtm8BE8xILGp3YuGuEBmp_gITO0tz9',
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
+            // try {
+            //     const response = await axios.post(
+            //         'https://fcm.googleapis.com/fcm/send',
+            //         {
+            //             registration_ids: fcmtokendata,
+            //             notification: {
+            //                 title: 'Question: '+textInput,
+            //                 body: 'Asked by '+learnerName,
+            //             }
+            //         },
+            //         {
+            //             headers: {
+            //                 Authorization: 'key=AAAALbx6OSY:APA91bE-XoNsHHFbu9VxAY826Fwv4QJ2Z6IVjxJqnZZkvDsZkcQSeZOhCrKZHDZe7SJa-CpCZJ_PlawzXrK1BQheWT4Lj28XNuhK2a5ZDULkDoqtm8BE8xILGp3YuGuEBmp_gITO0tz9',
+            //                 'Content-Type': 'application/json'
+            //             }
+            //         }
+            //     );
 
-                console.log('Response from FCM:', response.data);
+            //     console.log('Response from FCM:', response.data);
 
-                if (response.data.success) {
-                    alert('Notification sent successfully!');
-                } else {
-                    alert('Failed to send notification. Check the server logs for details.');
-                }
-            } catch (error) {
-                console.error('Error sending notification:', error);
-                alert('An error occurred while sending the notification.');
-            }
+            //     if (response.data.success) {
+            //         alert('Notification sent successfully!');
+            //     } else {
+            //         alert('Failed to send notification. Check the server logs for details.');
+            //     }
+            // } catch (error) {
+            //     console.error('Error sending notification:', error);
+            //     alert('An error occurred while sending the notification.');
+            // }
 
             // Delay the navigation by 5 seconds--------------------------------------------👇👇👇👇
             setTimeout(() => {
                 // Redirect to the learner connect page with the document ID
                 navigate(`/learner/connect/${docRef.id}`);
-            }, 5000);
+            }, 50);
 
             // Reset states after successful submission
             setTextInput('');
@@ -244,11 +259,11 @@ const Home = () => {
 
 
     const homeStyle = {
-        height: '100%',
+        minHeight: '100vh',
         display: 'flex',
         justifyContent: 'center',
         padding: 20,
-        backgroundColor: 'red',
+        backgroundColor: '#5813ea',
         background: `
       repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(255, 133, 244, 0.8) 50px, rgba(66, 133, 244, 0.8) 51px),
       repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(66, 133, 244, 0.8) 50px, rgba(66, 133, 244, 0.8) 51px),
@@ -264,14 +279,13 @@ const Home = () => {
         flexDirection: 'column',
         alignItems: 'flex-start',
         overflow: 'hidden',
-        backgroundColor: '#F3F6FC',
-
+        backgroundColor: 'white',
     };
 
     const headingStyle = {
         width: '100%',
-        backgroundColor: '#FFF4E8',
-        fontSize: isMobileView ? 20 : 25,
+        backgroundColor: 'white',
+        fontSize: 20,
 
         fontFamily: 'DMM',
         fontWeight: 500,
@@ -285,10 +299,65 @@ const Home = () => {
         backgroundColor: 'white',
         borderRadius: 15,
         margin: 'auto',
-        marginTop: '20px',
+        marginTop: '10px',
         border: '1px solid blue',
         boxShadow: '0px 08px 10px rgba(0, 0, 0, 0.1)',
-        marginBottom: '20px'
+        marginBottom: '20px',
+        overflowY: 'auto',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+    };
+
+    const tabBarStyle = {
+        display: 'flex',
+        gap: 10,
+        padding: '14px 20px 0 20px',
+        borderBottom: '1px solid #E5E7EB',
+        position: 'sticky',
+        top: 0,
+        backgroundColor: 'white',
+        zIndex: 5,
+    };
+
+    const tabButtonStyle = (isActive) => ({
+        fontFamily: 'DMM',
+        fontSize: 15,
+        fontWeight: 450,
+        color: isActive ? 'white' : '#5813EA',
+        backgroundColor: isActive ? '#ff7b6a' : 'transparent',
+        borderRadius: 100,
+        border: isActive ? 'none' : '1px solid #afadb3',
+        outline: 'none',
+        padding: '8px 22px',
+        cursor: 'pointer',
+        marginBottom: 14,
+    });
+
+    const tutorCardStyle = {
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: 8,
+        padding: '12px 16px',
+        width: 220,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
+        fontFamily: 'DMM',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    };
+
+    const bookButtonStyle = {
+        fontFamily: 'DMM',
+        fontSize: 13,
+        color: '#5813EA',
+        backgroundColor: 'transparent',
+        border: '1px solid #D8CCF7',
+        borderRadius: 8,
+        outline: 'none',
+        padding: '7px 14px',
+        cursor: 'pointer',
+        marginTop: 4,
+        fontWeight: 400,
     };
 
     // const dropAreaStyle = {
@@ -311,7 +380,7 @@ const Home = () => {
 
     const bgColor = 'white';
     const textColor = 'black';
-    const selectedBgColor = '#4285F4';
+    const selectedBgColor = '#5813EA';
     const selectedTextColor = 'white';
     const initialBorderRadius = 50;
     const borderColor = '#7D716A';
@@ -319,18 +388,51 @@ const Home = () => {
 
     const learnerName = localStorage.getItem('LearnerName') || 'Learner'; // Use 'Learner' as a default name if not found
     const learnerEmail = localStorage.getItem('LearnerEmail') || 'g6.kartikey@gmail.com'; // Use 'Learner' as a default name if not found
+
     return (
         <>
             <Navbar1 />
             <div style={homeStyle}>
                 <div style={contentStyle}>
-                    <div style={headingStyle}>⚡⚡Hi {learnerName}, what is your question today?</div>
+                    <div
+                        style={{
+                            ...headingStyle,
+                            display: 'flex',
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <div style={{ marginLeft: 30, margin: 3 ,marginTop:5}}>
+                            <FontAwesomeIcon icon={faBolt} style={{ marginRight: 8, color: '#ff7b6a',marginLeft:5 }} />
+                        
+                            Hi <span style={{color:"#5813ea",fontWeight:500}}>{learnerName},</span> what is your question today?
+                        </div>
+                    </div>
                     <div style={mainboxStyle}>
+                        <div style={tabBarStyle}>
+                            <button
+                                onClick={() => setActiveTab('instant')}
+                                style={tabButtonStyle(activeTab === 'instant')}
+                            >
+                                <FontAwesomeIcon icon={faBolt} style={{ marginRight: 8 }} />
+                                Instant
+                            </button>
+                            <button
+                                onClick={() => navigate('/learner/find-tutor')}
+                                style={tabButtonStyle(activeTab === 'book')}
+                            >
+                                <FontAwesomeIcon icon={faCalendarAlt} style={{ marginRight: 8 }} />
+                                Book a Session
+                            </button>
+                        </div>
+
+                        {activeTab === 'instant' && (<>
                         <div style={{ padding: '10px 20px', textAlign: 'left' }}>
                             <div style={{ display: 'flex' }}>
                                 <button
                                     style={{
-                                        backgroundColor: '#4285f4',
+                                        backgroundColor: '#5813EA',
                                         color: 'white',
                                         borderRadius: '50%',
                                         width: 30,
@@ -423,7 +525,7 @@ const Home = () => {
                                         fontFamily: 'DMM',
                                         fontSize: 15,
                                         color: 'white',
-                                        backgroundColor: '#4285F4',
+                                        backgroundColor: '#5813EA',
                                         borderRadius: 50,
                                         border: 'none',
                                         outline: 'none',
@@ -450,7 +552,7 @@ const Home = () => {
                             >
                                 <button
                                     style={{
-                                        backgroundColor: '#4285F4',
+                                        backgroundColor: '#5813EA',
                                         color: 'white',
                                         borderRadius: '50%',
                                         width: 30,
@@ -507,35 +609,51 @@ const Home = () => {
                         </div>
 
                         <div style={{ marginTop: 20, marginLeft: 40,display:'flex' ,justifyContent:'center',gap:'50px'}}>
-                            <button
-                                style={{
-                                    fontFamily: 'DMM',
-                                    fontSize: 15,
-                                    color: 'white',
-                                    backgroundColor: '#4285F4',
-                                    borderRadius: 50,
-                                    border: 'none',
-                                    outline: 'none',
-                                    padding: 10,
-                                    paddingLeft: 15,
-                                    paddingRight: 15,
-                                    opacity: connectButtonOpacity,
-                                    cursor: isConnectButtonDisabled ? 'not-allowed' : 'pointer',
-                                    marginBottom: '75px'
-                                }}
-                                disabled={isConnectButtonDisabled}
-                                onClick={handleConnectButtonClick}
-                            >
-                                Connect
-                            </button>
+                        <button
+    style={{
+        fontFamily: 'DMM',
+        fontSize: 15,
+        fontWeight: 600,
+        color: '#FFFFFF',
+        background: isConnectButtonDisabled
+            ? '#9CA3AF'
+            : 'linear-gradient(135deg, #16A34A 0%, #22C55E 100%)',
+        borderRadius: 50,
+        border: 'none',
+        outline: 'none',
+        padding: '12px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 9,
+        opacity: connectButtonOpacity,
+        cursor: isConnectButtonDisabled ? 'not-allowed' : 'pointer',
+        marginBottom: '75px',
+        minWidth: 135,
+        boxShadow: isConnectButtonDisabled
+            ? 'none'
+            : '0 7px 18px rgba(22, 163, 74, 0.35)',
+        transition: 'all 0.2s ease',
+    }}
+    disabled={isConnectButtonDisabled}
+    onClick={handleConnectButtonClick}
+>
+    <FontAwesomeIcon
+        icon={faVideo}
+        style={{
+            fontSize: 14,
+        }}
+    />
+    Connect
+</button>
 
-                            {/* ---------Search btn--------- */}
+                            {/* ---------Search btn------
                             <button
                                 style={{
                                     fontFamily: 'DMM',
                                     fontSize: 15,
                                     color: 'white',
-                                    backgroundColor: '#4285F4',
+                                    backgroundColor: '#5813EA',
                                     borderRadius: 50,
                                     border: 'none',
                                     outline: 'none',
@@ -551,7 +669,69 @@ const Home = () => {
                             >
                                 Search
                             </button>
+                            --- */}
                         </div>
+                        </>)}
+                        {activeTab === 'book' && (
+                        <div style={{ padding: '20px 40px', textAlign: 'left', marginBottom: '40px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 5, marginLeft: 20 }}>
+                                <button
+                                    onClick={() => navigate('/learner/find-tutor')}
+                                    style={{
+                                        fontFamily: 'DMM',
+                                        fontSize: 15,
+                                        color: 'white',
+                                        backgroundColor: '#5813EA',
+                                        borderRadius: 50,
+                                        border: 'none',
+                                        outline: 'none',
+                                        padding: '10px 20px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Find Tutors
+                                </button>
+                                <button
+                                    onClick={() => navigate('/learner/mybookings')}
+                                    style={{
+                                        fontFamily: 'DMM',
+                                        fontSize: 17,
+                                        color: 'white',
+                                        backgroundColor: '#0E9F6E',
+                                        borderRadius: 50,
+                                        border: 'none',
+                                        outline: 'none',
+                                        padding: '12px 26px',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    My Bookings
+                                </button>
+                            </div>
+                            <h3 style={{ fontWeight: 500, marginTop: 28 }}>All Tutors</h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 12, marginLeft: 20 }}>
+                                {tutors.length === 0 ? (
+                                    <div style={{ color: '#7D716A' }}>No tutors yet.</div>
+                                ) : (
+                                    tutors.map((t) => (
+                                        <div key={t.id} style={tutorCardStyle}>
+                                            <div style={{ fontWeight: 500, fontSize: 15 }}>{t.Name}</div>
+                                            <div style={{ fontSize: 12.5, color: '#6B7280', fontWeight: 400 }}>
+                                                {(t.selectedSkills || []).join(' · ') || 'General'}
+                                            </div>
+                                            <button
+                                                onClick={() => navigate(`/learner/tutor/${t.id}`)}
+                                                style={bookButtonStyle}
+                                            >
+                                                Book a Session
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                        )}
                     </div>
                 </div>
             </div>

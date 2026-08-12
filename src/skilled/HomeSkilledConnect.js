@@ -108,7 +108,7 @@ const HomeSkilledConnect = () => {
     useEffect(() => {
         if (status === 2) {
             alert('Connection found');
-            navigate(`/room/${docId}`);
+            navigate(`/room-expert/${docId}`);
         }
     }, [status, docId, navigate]);
 

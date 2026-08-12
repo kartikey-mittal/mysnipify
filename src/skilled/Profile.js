@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { db, collection, } from '../Firebase'
 import { getToken } from "firebase/messaging";
-import { messaging } from "../Firebase";
+// import { messaging } from "../Firebase";
 const skillsData = ['C++', 'JavaScript', 'Python', 'React', 'Node.js', "C", 'Java', 'PHP'];
 const professionData = ['Student', 'Working Professional', 'Freelancer'];
 
@@ -79,48 +79,77 @@ const Profile = () => {
     //   const skilledCollectionRef = collection(db, 'Skilled');
     //   const skilledDocRef = doc(skilledCollectionRef, id);
   
-      const fetchFCMToken = async () => {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === "granted") {
-                    // Generate Token
-                    const token = await getToken(messaging, {
-                        vapidKey: "BKv8mFnjjmLOQt0PJHotmX37n0BTsOF_IaT2vBPv8TyhOVzaHkG32cuFfoDwrgbd3f27d2yNoTBz-Bx_q5H3D1o",
-                    });
-                    console.log("Token Gen", token);
+    //   const fetchFCMToken = async () => {
+    //         try {
+    //             const permission = await Notification.requestPermission();
+    //             if (permission === "granted") {
+    //                 // Generate Token
+    //                 const token = await getToken(messaging, {
+    //                     vapidKey: "BKv8mFnjjmLOQt0PJHotmX37n0BTsOF_IaT2vBPv8TyhOVzaHkG32cuFfoDwrgbd3f27d2yNoTBz-Bx_q5H3D1o",
+    //                 });
+    //                 console.log("Token Gen", token);
 
-                    // Save FCM token in Firestore
-                    const skilledCollectionRef = collection(db, 'Skilled');
-                    const skilledDocRef = doc(skilledCollectionRef, id);
-                    const docSnapshot = await getDoc(skilledDocRef);
-                    const existingData = docSnapshot.data();
+    //                 // Save FCM token in Firestore
+    //                 const skilledCollectionRef = collection(db, 'Skilled');
+    //                 const skilledDocRef = doc(skilledCollectionRef, id);
+    //                 const docSnapshot = await getDoc(skilledDocRef);
+    //                 const existingData = docSnapshot.data();
 
-                    const updatedData = {
-                        ...existingData,
-                        selectedSkills: selectedSkills || existingData.selectedSkills,
-                        selectedProfession: selectedProfession || existingData.selectedProfession,
-                        githubProfile: githubProfile || existingData.githubProfile,
-                        gfgProfile: gfgProfile || existingData.gfgProfile,
-                        fcmtoken: token, // Save FCM token here
-                    };
+    //                 const updatedData = {
+    //                     ...existingData,
+    //                     selectedSkills: selectedSkills || existingData.selectedSkills,
+    //                     selectedProfession: selectedProfession || existingData.selectedProfession,
+    //                     githubProfile: githubProfile || existingData.githubProfile,
+    //                     gfgProfile: gfgProfile || existingData.gfgProfile,
+    //                     fcmtoken: token, // Save FCM token here
+    //                 };
 
-                    await setDoc(skilledDocRef, updatedData);
+    //                 await setDoc(skilledDocRef, updatedData);
 
-                    // Store data in localStorage
-                    localStorage.setItem('SkilledSkillsArray', JSON.stringify(updatedData.selectedSkills || []));
-                    localStorage.setItem('SkilledProfession', updatedData.selectedProfession || '');
+    //                 // Store data in localStorage
+    //                 localStorage.setItem('SkilledSkillsArray', JSON.stringify(updatedData.selectedSkills || []));
+    //                 localStorage.setItem('SkilledProfession', updatedData.selectedProfession || '');
 
-                    alert('Data saved to Firestore!');
-                    navigate('/skilled/home');
-                } else if (permission === "denied") {
-                    alert("You denied permission for notifications");
-                }
-            } catch (error) {
-                console.error('Error fetching or saving FCM token:', error);
-            }
+    //                 alert('Data saved to Firestore!');
+    //                 navigate('/skilled/home');
+    //             } else if (permission === "denied") {
+    //                 alert("You denied permission for notifications");
+    //             }
+    //         } catch (error) {
+    //             console.error('Error fetching or saving FCM token:', error);
+    //         }
+    //     };
+
+        // FCM token flow skipped temporarily (service worker registration issue).
+        // fetchFCMToken() is NOT called for now - profile is saved directly below.
+        const saveProfile = async () => {
+          try {
+            const skilledCollectionRef = collection(db, 'Skilled');
+            const skilledDocRef = doc(skilledCollectionRef, id);
+            const docSnapshot = await getDoc(skilledDocRef);
+            const existingData = docSnapshot.data() || {};
+
+            const updatedData = {
+              ...existingData,
+              selectedSkills: selectedSkills || existingData.selectedSkills,
+              selectedProfession: selectedProfession || existingData.selectedProfession,
+              githubProfile: githubProfile || existingData.githubProfile,
+              gfgProfile: gfgProfile || existingData.gfgProfile,
+            };
+
+            await setDoc(skilledDocRef, updatedData);
+
+            localStorage.setItem('SkilledSkillsArray', JSON.stringify(updatedData.selectedSkills || []));
+            localStorage.setItem('SkilledProfession', updatedData.selectedProfession || '');
+
+            console.log('Profile saved to Firestore!');
+          } catch (error) {
+            console.error('Error saving profile:', error);
+          }
+          navigate('/skilled/home');
         };
 
-        fetchFCMToken();
+        saveProfile();
     }
 }, [selectedSkill, step, selectedProfession, githubProfile, gfgProfile, id, navigate]);
 

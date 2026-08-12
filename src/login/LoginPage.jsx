@@ -1,45 +1,58 @@
-import React, { useState,useEffect } from 'react';
-import Logo from '../assets/snipify_ob.png'
-import { collection, getDocs, query, where,  } from 'firebase/firestore';
-import { db } from '../Firebase'
+import React, { useState, useEffect } from 'react';
+import Logo from '../assets/snipify_ob.png';
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  updateDoc,
+} from 'firebase/firestore';
+import { db } from '../Firebase';
+import {
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaGraduationCap,
+  FaToolbox,
+  FaArrowRight,
+  FaCheck,
+} from 'react-icons/fa';
 
 const LoginPage = () => {
-
-
-  const [isLeftSectionVisible, setIsLeftSectionVisible] = useState(true);
+  const [isLeftSectionVisible, setIsLeftSectionVisible] = useState(
+    window.innerWidth > 780
+  );
 
   useEffect(() => {
     const handleResize = () => {
-      setIsLeftSectionVisible(window.innerWidth > 615);
+      setIsLeftSectionVisible(window.innerWidth > 780);
     };
 
-    // Add event listener for window resize
     window.addEventListener('resize', handleResize);
-
-    // Initial check on mount
     handleResize();
 
-    // Remove event listener on component unmount
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-
 
   const [selectedButton, setSelectedButton] = useState(null);
   const [enteredEmail, setEnteredEmail] = useState('');
   const [enteredPassword, setEnteredPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleButtonClick = (buttonName) => {
     setSelectedButton(buttonName);
   };
 
   const handleContinueClick = async () => {
-    // Extract email and password from the state
-    console.log(enteredEmail);
     const email = enteredEmail.trim();
     const password = enteredPassword.trim();
+
+    if (!selectedButton || !email || !password) return;
+
+    setSubmitting(true);
 
     try {
       if (selectedButton === 'learner') {
@@ -48,16 +61,26 @@ const LoginPage = () => {
           where('Email', '==', email),
           where('Password', '==', password)
         );
+
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          alert('Login successful for Learner!');
-          const learnerData = querySnapshot.docs[0].data();
+          const learnerDoc = querySnapshot.docs[0];
+          const learnerData = learnerDoc.data();
+
           localStorage.setItem('LearnerName', learnerData.Name);
           localStorage.setItem('LearnerEmail', learnerData.Email);
+          localStorage.setItem('LearnerId', learnerDoc.id);
 
-          const learnerName = localStorage.getItem('LearnerName');
-          console.log(`Learner Name: ${learnerName}`);
+          if (
+            learnerData.creditBalance === undefined ||
+            learnerData.creditBalance === null
+          ) {
+            await updateDoc(doc(db, 'Learner', learnerDoc.id), {
+              creditBalance: 500,
+            });
+          }
+
           window.location.href = '/learner/home';
         } else {
           alert('No matching record found for Learner');
@@ -68,220 +91,552 @@ const LoginPage = () => {
           where('Email', '==', email),
           where('Password', '==', password)
         );
+
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          const skilledData = querySnapshot.docs[0].data();
+          const skilledDoc = querySnapshot.docs[0];
+          const skilledData = skilledDoc.data();
+
           localStorage.setItem('SkilledName', skilledData.Name);
           localStorage.setItem('SkilledEmail', skilledData.Email);
-          localStorage.setItem('SkilledSkillsArray', JSON.stringify(skilledData.selectedSkills || [])); 
-          alert('Login successful for Skilled!');
+          localStorage.setItem('SkilledId', skilledDoc.id);
+
+          localStorage.setItem(
+            'SkilledSkillsArray',
+            JSON.stringify(skilledData.selectedSkills || [])
+          );
+
           window.location.href = '/skilled/home';
         } else {
-          alert('No matching record found for Skilled');
+          alert('No matching record found for Tutor');
         }
       }
     } catch (error) {
       console.error('Error searching Firestore:', error);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const isContinueButtonDisabled = !(selectedButton && enteredEmail && enteredPassword);
+  const isContinueButtonDisabled =
+    !selectedButton ||
+    !enteredEmail.trim() ||
+    !enteredPassword.trim() ||
+    submitting;
 
   const styles = {
     container: {
       display: 'flex',
-      height: '100vh',
+      flexDirection: 'row',
+      minHeight: '100vh',
+      width: '100%',
+      fontFamily: 'DMM',
     },
+
     leftSection: {
       background: `
-      repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(242, 242, 242, 0.3) 50px, rgba(242, 242, 242, 0.3) 51px),
-      repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(242, 242, 242, 0.3) 50px, rgba(242, 242, 242, 0.3) 51px),
-      #5813EA`,
-      flex: '0 0 60%',
-      backgroundColor: '#5813EA',
+        radial-gradient(
+          circle at 20% 20%,
+          rgba(255,255,255,0.06),
+          transparent 40%
+        ),
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 50px,
+          rgba(242,242,242,0.15) 50px,
+          rgba(242,242,242,0.15) 51px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 50px,
+          rgba(242,242,242,0.15) 50px,
+          rgba(242,242,242,0.15) 51px
+        ),
+        linear-gradient(155deg, #4A0FC7, #7A3CF0)
+      `,
+      flex: '0 0 56%',
       color: 'white',
-      fontWeight: 800,
       textAlign: 'center',
       justifyContent: 'center',
       alignItems: 'center',
       display: 'flex',
-      fontSize: 150,
-      fontFamily: 'DMM',
+      flexDirection: 'column',
+      position: 'relative',
+      overflow: 'hidden',
+      padding: 40,
+      boxSizing: 'border-box',
     },
-    leftSectionHidden: {
-      display: isLeftSectionVisible ? 'flex' : 'none',
+
+    leftGlow: {
+      position: 'absolute',
+      width: 420,
+      height: 420,
+      borderRadius: '50%',
+      background:
+        'radial-gradient(circle, rgba(255,255,255,0.10), transparent 70%)',
+      top: -140,
+      left: -100,
+      pointerEvents: 'none',
     },
+
+    logo: {
+      height: 'auto',
+      maxWidth: '55%',
+      position: 'relative',
+    },
+
+    logoMobile: {
+      height: 60,
+      maxWidth: '70%',
+      marginTop: 24,
+      marginBottom: 10,
+    },
+
     rightSection: {
-      flex: '0 0 40%',
-      display: 'flex',
-      flexDirection:"column",
-      backgroundColor: '#EEF4FE',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: isLeftSectionVisible ? '40%' : '100%',
-    },
-    formContainer: {
-      height: '80vh',
-      width: '100%',
-      backgroundColor: 'white',
-      margin: 20,
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'flex-start',
-      borderRadius: 20,
-    },
-    loginTitle: {
-      marginLeft: 30,
-      marginTop: 20,
-      marginBottom: 10,
-      color: '#1E1E1E',
-      fontFamily: 'DMM',
-      fontSize: 30,
-      fontWeight: 600,
-    },
-    loginSubtitle: {
-      marginLeft: 30,
-      color: '#7D716A',
-      fontFamily: 'DMM',
-      fontSize: 20,
-    },
-    buttonGrid: {
-      display: 'grid',
-      gridTemplateColumns: '30px 1fr 1fr 30px',
-      justifyContent: 'center',
+
+      backgroundColor: '#F5F3FE',
+
+      backgroundImage: `
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 42px,
+          rgba(59, 130, 246, 0.04) 42px,
+          rgba(59, 130, 246, 0.04) 43px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 42px,
+          rgba(59, 130, 246, 0.04) 42px,
+          rgba(59, 130, 246, 0.04) 43px
+        )
+      `,
+
       alignItems: 'center',
-      backgroundColor: 'white',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      boxSizing: 'border-box',
+    },
+
+    formContainer: {
       width: '100%',
-      gap: 40,
-      marginTop: 20,
-    },
-    button: {
-      width: '100px',
+      maxWidth: 460,
       backgroundColor: 'white',
+      margin: '30px 0',
+      padding: '38px 42px 32px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
       borderRadius: 15,
-      padding: 5,
+      boxShadow: '0 8px 15px rgba(88,19,234,0.08)',
+      boxSizing: 'border-box',
+    },
+
+    headerBlock: {
+      marginBottom: 8,
+    },
+
+    loginTitle: {
+      color: '#111827',
+      fontSize: 27,
+      fontWeight: 700,
+      textAlign: 'left',
+    },
+
+    loginSubtitle: {
+      color: '#7D716A',
+      fontSize: 14.5,
+      marginTop: 5,
+      textAlign: 'left',
+    },
+
+    roleLabel: {
+      color: '#7D716A',
+      fontSize: 13.5,
+      marginTop: 24,
+      marginBottom: 9,
+      textAlign: 'left',
+    },
+
+    roleTabs: {
+      display: 'flex',
+      gap: 10,
+      marginBottom: 6,
+    },
+
+    roleCard: {
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 11,
+      padding: '13px 14px',
+      minHeight: 62,
+      borderRadius: 13,
+      border: '1.5px solid transparent',
       cursor: 'pointer',
-      fontFamily: 'DMM',
-      borderWidth: '1px',
+      transition: 'all 0.15s ease',
+      boxSizing: 'border-box',
     },
-    emailLabel: {
-      marginLeft: 30,
-      color: '#7D716A',
-      fontFamily: 'DMM',
-      fontSize: 15,
-      marginTop: 50,
+
+    roleCardLearner: {
+      backgroundColor: '#EFF6FF',
+      borderColor: '#DBEAFE',
+      color: '#374151',
     },
-    passwordLabel: {
-      marginLeft: 30,
-      color: '#7D716A',
-      fontFamily: 'DMM',
-      fontSize: 15,
-      marginTop: 20,
+
+    roleCardLearnerActive: {
+      backgroundColor: '#3B82F6',
+      borderColor: '#3B82F6',
+      color: 'white',
+      boxShadow: '0 4px 14px rgba(59,130,246,0.28)',
     },
-    inputField: {
+
+    roleCardSkilled: {
+      backgroundColor: '#FDF2F8',
+      borderColor: '#FCE7F3',
+      color: '#374151',
+    },
+
+    roleCardSkilledActive: {
+      backgroundColor: '#DB2777',
+      borderColor: '#DB2777',
+      color: 'white',
+      boxShadow: '0 4px 14px rgba(219,39,119,0.28)',
+    },
+
+    roleIconWrap: {
+      width: 34,
+      height: 34,
       borderRadius: 10,
-      margin: 5,
-      padding: '10px',
-      width: '50%',
-      borderColor: '#7D716A',
-      borderWidth: '0.5px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+
+    fieldLabel: {
+      color: '#7D716A',
+      fontSize: 13.5,
+      marginTop: 20,
+      marginBottom: 7,
+      textAlign: 'left',
+    },
+
+    inputWrap: {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      width: '100%',
+    },
+
+    inputIcon: {
+      position: 'absolute',
+      left: 14,
+      fontSize: 14,
+      color: '#9CA3AF',
+      pointerEvents: 'none',
+    },
+
+    inputField: {
+      borderRadius: 11,
+      padding: '13px 42px 13px 38px',
+      width: '100%',
+      border: '1px solid #E5E7EB',
       fontFamily: 'DMM',
+      fontSize: 14.5,
+      color: '#111827',
+      outline: 'none',
+      boxSizing: 'border-box',
+    },
+
+    eyeIcon: {
+      position: 'absolute',
+      right: 14,
+      fontSize: 14,
+      color: '#9CA3AF',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
     },
 
     continueButton: {
-
-
-      borderRadius: '20px',
-      margin: '5px',
-      padding: '10px',
-      width: '15%',
-      backgroundColor: isContinueButtonDisabled ? 'rgba(66, 133, 244, 0.5)' : '#4285F4',
+      borderRadius: 12,
+      marginTop: 28,
+      padding: '14px',
+      backgroundColor: '#5813EA',
       color: 'white',
       fontFamily: 'DMM',
       border: 'none',
-      fontSize: '15px',
-      
-      marginBottom: '20px',
-      cursor: isContinueButtonDisabled ? 'not-allowed' : 'pointer',
-      opacity: isContinueButtonDisabled ? 0.5 : 1,
-    },
-    learnerButton: {
-      // styles for the Learner button when selected
-      backgroundColor: selectedButton === 'learner' ? '#4285F4' : 'white',
-      color: selectedButton === 'learner' ? 'white' : '#7D716A',
-      border: `1px solid ${selectedButton === 'learner' ? '#4285F4' : '#7D716A'}`,
-      borderWidth: selectedButton === 'learner' ? '2px' : '1px',
-    },
-    skilledButton: {
-      // styles for the Skilled button when selected
-      backgroundColor: selectedButton === 'skilled' ? '#4285F4' : 'white',
-      color: selectedButton === 'skilled' ? 'white' : '#7D716A',
-      border: `1px solid ${selectedButton === 'skilled' ? '#4285F4' : '#7D716A'}`,
-      borderWidth: selectedButton === 'skilled' ? '2px' : '1px',
-    },
-    logobtn: {
-      height: 'auto', // Set height to auto to maintain aspect ratio
-      maxWidth: '70%', // Ensure the image doesn't exceed the width of its container
+      fontSize: 15,
+      fontWeight: 600,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      transition: 'opacity 0.15s ease',
+      width: '100%',
+      boxSizing: 'border-box',
     },
 
-    logobtn2: {
-      height: '200px', // Set height to auto to maintain aspect ratio
-      maxWidth: '70%', // Ensure the image doesn't exceed the width of its container
-      display: isLeftSectionVisible ? 'none' : 'flex',
+    termsText: {
+      fontSize: 11.5,
+      color: '#9CA3AF',
+      textAlign: 'center',
+      marginTop: 16,
+      lineHeight: 1.5,
     },
-
   };
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.leftSection, ...styles.leftSectionHidden }}>
 
-        <img src={Logo} alt="Logo" style={styles.logobtn} /> {/* Stretch the SVG logo */}
-      </div>
+      {/* Left brand panel */}
+      {isLeftSectionVisible && (
+        <div style={styles.leftSection}>
+          <div style={styles.leftGlow} />
 
-      <div style={styles.rightSection}>
-      <img src={Logo} alt="Logo" style={styles.logobtn2}></img>
+          <img
+            src={Logo}
+            alt="Logo"
+            style={styles.logo}
+          />
+        </div>
+      )}
+
+      {/* Right login panel */}
+      <div
+        style={{
+          ...styles.rightSection,
+          width: isLeftSectionVisible ? '44%' : '100%',
+        }}
+      >
+
+        {/* Mobile logo */}
+        {!isLeftSectionVisible && (
+          <img
+            src={Logo}
+            alt="Logo"
+            style={styles.logoMobile}
+          />
+        )}
+
         <div style={styles.formContainer}>
-          <div style={styles.loginTitle}>Login</div>
-          <div style={styles.loginSubtitle}>ready to onboard in community :)</div>
 
-          {/* Buttons */}
-          <div style={styles.buttonGrid}>
-            <div></div>
+          {/* Header */}
+          <div style={styles.headerBlock}>
+            <div style={styles.loginTitle}>
+              Welcome back
+            </div>
+
+            <div style={styles.loginSubtitle}>
+              Ready to continue your journey :)
+            </div>
+          </div>
+
+          {/* Role */}
+          <div style={styles.roleLabel}>
+            I want to login as
+          </div>
+
+          <div style={styles.roleTabs}>
+
+            {/* Learner */}
             <div
               style={{
-                ...styles.button,
-                ...styles.learnerButton, // Apply conditional styles for the Learner button
+                ...styles.roleCard,
+                ...(selectedButton === 'learner'
+                  ? styles.roleCardLearnerActive
+                  : styles.roleCardLearner),
               }}
               onClick={() => handleButtonClick('learner')}
             >
-              Learner
+              <div
+                style={{
+                  ...styles.roleIconWrap,
+                  backgroundColor:
+                    selectedButton === 'learner'
+                      ? 'rgba(255,255,255,0.2)'
+                      : '#DBEAFE',
+                }}
+              >
+                <FaGraduationCap
+                  style={{
+                    fontSize: 17,
+                    color:
+                      selectedButton === 'learner'
+                        ? 'white'
+                        : '#3B82F6',
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 14.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  Learner
+                </span>
+              </div>
+
+              {selectedButton === 'learner' && (
+                <FaCheck
+                  style={{
+                    fontSize: 12,
+                    marginLeft: 'auto',
+                  }}
+                />
+              )}
             </div>
+
+            {/* Tutor */}
             <div
               style={{
-                ...styles.button,
-                ...styles.skilledButton, // Apply conditional styles for the Skilled button
+                ...styles.roleCard,
+                ...(selectedButton === 'skilled'
+                  ? styles.roleCardSkilledActive
+                  : styles.roleCardSkilled),
               }}
               onClick={() => handleButtonClick('skilled')}
             >
-              Skilled
+              <div
+                style={{
+                  ...styles.roleIconWrap,
+                  backgroundColor:
+                    selectedButton === 'skilled'
+                      ? 'rgba(255,255,255,0.2)'
+                      : '#FCE7F3',
+                }}
+              >
+                <FaToolbox
+                  style={{
+                    fontSize: 17,
+                    color:
+                      selectedButton === 'skilled'
+                        ? 'white'
+                        : '#DB2777',
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 14.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  Tutor
+                </span>
+              </div>
+
+              {selectedButton === 'skilled' && (
+                <FaCheck
+                  style={{
+                    fontSize: 12,
+                    marginLeft: 'auto',
+                  }}
+                />
+              )}
             </div>
-            <div></div>
+
           </div>
 
-          {/* Form */}
-          <div style={styles.emailLabel}>Email</div>
-          <input type="text" style={{ ...styles.inputField, marginLeft: '20px' }} placeholder="Enter your email" value={enteredEmail}
-            onChange={(event) => setEnteredEmail(event.target.value)} />
+          {/* Email */}
+          <div style={styles.fieldLabel}>
+            Email
+          </div>
 
+          <div style={styles.inputWrap}>
+            <FaEnvelope style={styles.inputIcon} />
 
-          <div style={styles.passwordLabel}>Password</div>
-          <input type="password" style={{ ...styles.inputField, marginLeft: '20px' }} placeholder="Enter your Password" value={enteredPassword}
-            onChange={(event) => setEnteredPassword(event.target.value)} />
+            <input
+              type="email"
+              style={styles.inputField}
+              placeholder="Enter your email"
+              value={enteredEmail}
+              onChange={(event) =>
+                setEnteredEmail(event.target.value)
+              }
+            />
+          </div>
 
-          {/* Continue Button */}
-          <div style={{ ...styles.continueButton, marginLeft: '20px', marginTop: '50px' }} onClick={isContinueButtonDisabled ? null : handleContinueClick}>Continue</div>
+          {/* Password */}
+          <div style={styles.fieldLabel}>
+            Password
+          </div>
+
+          <div style={styles.inputWrap}>
+            <FaLock style={styles.inputIcon} />
+
+            <input
+              type={showPassword ? 'text' : 'password'}
+              style={styles.inputField}
+              placeholder="Enter your password"
+              value={enteredPassword}
+              onChange={(event) =>
+                setEnteredPassword(event.target.value)
+              }
+            />
+
+            <div
+              style={styles.eyeIcon}
+              onClick={() =>
+                setShowPassword((value) => !value)
+              }
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </div>
+          </div>
+
+          {/* Continue */}
+          <button
+            style={{
+              ...styles.continueButton,
+              opacity: isContinueButtonDisabled ? 0.5 : 1,
+              cursor: isContinueButtonDisabled
+                ? 'not-allowed'
+                : 'pointer',
+            }}
+            onClick={handleContinueClick}
+            disabled={isContinueButtonDisabled}
+          >
+            {submitting ? 'Logging in...' : 'Continue'}
+
+            {!submitting && (
+              <FaArrowRight
+                style={{
+                  fontSize: 12,
+                }}
+              />
+            )}
+          </button>
+
+          {/* Terms */}
+          <div style={styles.termsText}>
+            By continuing, you agree to Snipify's Terms of
+            Service and Privacy Policy.
+          </div>
+
         </div>
       </div>
     </div>

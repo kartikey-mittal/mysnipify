@@ -5,11 +5,13 @@ import RequestCard from "../components/RequestCard";
 import Navbar from "../Navbar";
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db, } from '../Firebase';
+import { useNavigate } from 'react-router-dom';
 import gif from '../assets/connection.gif';
 
 
 const HomeSkilled = () => {
     const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 615);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleResize = () => {
@@ -33,10 +35,11 @@ const HomeSkilled = () => {
     };
 
     const homeStyle = {
-        height: '100%',
+        minHeight: '100vh',
         display: 'flex',
         justifyContent: 'center',
         padding: 20,
+        backgroundColor: '#ff7b6a',
         background: `
     repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(242, 242, 242, 0.8) 50px, rgba(242, 242, 242, 0.8) 51px),
     repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(242, 242, 242, 0.8) 50px, rgba(242, 242, 242, 0.8)51px),
@@ -52,13 +55,13 @@ const HomeSkilled = () => {
         flexDirection: 'column',
         alignItems: 'flex-start',
         overflow: 'hidden', // Hide overflow content
-        backgroundColor: '#F3F6FC',
+        backgroundColor: 'white',
     };
 
     const headingStyle = {
         width: '100%',
-        backgroundColor: '#FFF4E8',
-        fontSize: 25,
+        backgroundColor: 'white',
+        fontSize: 20,
         fontFamily: 'DMM',
         fontWeight: 500,
         paddingTop: 5,
@@ -142,13 +145,16 @@ const HomeSkilled = () => {
                 <div style={contentStyle}>
                     <div style={headingStyle}>
                         <div style={{
-                            fontSize: isMobileView? 18:22,
+                            fontSize: 20,
                             fontFamily: 'DMM',
                             fontWeight: 500,
                             marginLeft: 30,
                             margin: 3
-                        }}>⚡⚡Hi {skilledName}, reshape the community!!</div>
-                        <CustomSwitch />
+                        }}>⚡Hi {skilledName}, reshape the community!!</div>
+                        <div style={{ display: 'flex', alignItems: 'center', marginRight: 10 }}>
+                          
+                            <CustomSwitch />
+                        </div>
                     </div>
 
                     <div style={mainboxStyle}>

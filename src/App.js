@@ -16,7 +16,8 @@ import FaceDetection from "./learner/FaceDetection";
 import HomeSkilled from "./skilled/HomeSkilled";
 import HomeConnect from "./learner/HomeConnect";
 import HomeSkilledConnect from "./skilled/HomeSkilledConnect";
-import Room from "./room/Room";
+import Room from "./room/room1";
+import Room2 from "./room/room2";
 import DB from "./team/DB";
 import OldSolution from "./team/OldSolution";
 import LearnerQuestion from "./team/LearnerQuestion";
@@ -37,6 +38,11 @@ import Demo from "./learner/GenieInterview";
 import Contribute from "./learner/Contribute";
 import Wallet from "./learner/Wallet";
 import Wallet2 from "./learner/Wallet2";
+import FindTutor from "./learner/FindTutor";
+import TutorAvailability from "./learner/TutorAvailability";
+import MyBookings from "./learner/MyBookings";
+import ManageAvailability from "./skilled/ManageAvailability";
+import BookedSessions from "./skilled/BookedSessions";
 
 function App() {
   return (
@@ -62,6 +68,7 @@ function App() {
         <Route path="/skilled/home" element={<HomeSkilled/>}   />
         <Route path="/skilled/connect/:docId" element={<HomeSkilledConnect/>}   />
         <Route path="/room/:roomId" element={<Room/>}   />
+        <Route path="/room-expert/:roomId" element={<Room2/>}   />
         <Route path="/t2" element={<Test1/>}   />
         <Route path="/test/Lakshay" element={<Lakshay />} />
         <Route path="/test/Benjamin" element={<Benjamin />} />
@@ -72,6 +79,11 @@ function App() {
         <Route path="/skilled/upload/:id" element={<Upload/>}   />
         <Route path="/learner/wallet" element={<Wallet/>}   />
         <Route path="/wallet" element={<Wallet2/>}   />
+        <Route path="/learner/find-tutor" element={<FindTutor/>}   />
+        <Route path="/learner/tutor/:id" element={<TutorAvailability/>}   />
+        <Route path="/learner/mybookings" element={<MyBookings/>}   />
+        <Route path="/skilled/availability" element={<ManageAvailability/>}   />
+        <Route path="/skilled/bookedsessions" element={<BookedSessions/>}   />
         <Route path="/signup/face/:id" element={<Face/>}   />
         <Route path="/skilled/face/:id" element={<CheckFace/>}   />
         <Route path="/question/:id" element={<Question/>}   />

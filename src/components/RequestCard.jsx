@@ -73,7 +73,7 @@ const RequestCard = ({ imageurl, question, skill, name, documentId }) => {
                 <div style={{ padding: '1rem', width: isMobileView?'70%' :'30%', height: '25%', backgroundColor: 'transparent' , }}>
                     <img
                         style={{ height: isMobileView?'15vh':'25vh', width: '100%', objectFit: 'cover', borderRadius: '9px',marginBottom: isMobileView? 15:0 }}
-                        src={imageurl}
+                        src={imageurl || 'https://static.vecteezy.com/system/resources/thumbnails/060/396/955/small/person-coding-on-computer-screen-in-flat-design-style-art-vector.jpg'}
                         alt="A descriptive alt text or an empty string for decorative images"
                     />
                 </div>

@@ -3,19 +3,15 @@ import Navbar1 from "../Navbar1";
 import { collection, getDocs, getDoc, query, where, addDoc, doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../Firebase';
 import { createTopup, verifyTopup } from '../utils/topup';
-import { FaWallet, FaArrowRight, FaCheckCircle, FaTimesCircle, FaClock, FaBolt, FaShieldAlt } from 'react-icons/fa';
+import { FaWallet, FaArrowRight, FaCheckCircle, FaTimesCircle, FaClock, FaShieldAlt } from 'react-icons/fa';
 
 const TOPUP_OPTIONS = [100, 200, 500, 1000];
 
 const Wallet = () => {
-    const [balance, setBalance] = useState(0);
-    const [amountINR, setAmountINR] = useState(100);
-    const [topups, setTopups] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [creating, setCreating] = useState(false);
-    const [paying, setPaying] = useState(null);
-    const [pollStatus, setPollStatus] = useState('');
-    const [error, setError] = useState('');
+    const [balance, setBalance] = useState(0), [amountINR, setAmountINR] = useState(100);
+    const [topups, setTopups] = useState([]), [loading, setLoading] = useState(true);
+    const [creating, setCreating] = useState(false), [paying, setPaying] = useState(null);
+    const [pollStatus, setPollStatus] = useState(''), [error, setError] = useState('');
     const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 780);
     const pollRef = useRef(null);
 
@@ -23,32 +19,25 @@ const Wallet = () => {
     const learnerEmail = localStorage.getItem('LearnerEmail') || '';
 
     useEffect(() => {
-        const handleResize = () => setIsMobileView(window.innerWidth <= 780);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const resize = () => setIsMobileView(window.innerWidth <= 780);
+        window.addEventListener('resize', resize);
+        loadData();
+        return () => {
+            window.removeEventListener('resize', resize);
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
     }, []);
 
     const markSucceeded = async (topupId, credits) => {
         if (!topupId) return;
-
         try {
-            const topupRef = doc(db, 'Topups', topupId);
-            const topupSnapshot = await getDoc(topupRef);
+            const ref = doc(db, 'Topups', topupId), snapshot = await getDoc(ref);
+            if (!snapshot.exists() || snapshot.data().status !== 'pending') return;
 
-            if (!topupSnapshot.exists()) return;
+            await updateDoc(ref, { status: 'succeeded', paidAt: serverTimestamp() });
 
-            const topup = topupSnapshot.data();
-
-            if (topup.status !== 'pending') return;
-
-            await updateDoc(topupRef, { status: 'succeeded', paidAt: serverTimestamp() });
-
-            const learnerSnapshot = await getDocs(query(collection(db, 'Learner'), where('Email', '==', learnerEmail)));
-
-            if (!learnerSnapshot.empty) {
-                const learnerId = learnerSnapshot.docs[0].id;
-                await updateDoc(doc(db, 'Learner', learnerId), { creditBalance: increment(credits) });
-            }
+            const learner = await getDocs(query(collection(db, 'Learner'), where('Email', '==', learnerEmail)));
+            if (!learner.empty) await updateDoc(doc(db, 'Learner', learner.docs[0].id), { creditBalance: increment(credits) });
         } catch (error) {
             console.log('Error adding credits:', error);
         }
@@ -56,18 +45,10 @@ const Wallet = () => {
 
     const markFailed = async (topupId, status) => {
         if (!topupId) return;
-
         try {
-            const topupRef = doc(db, 'Topups', topupId);
-            const topupSnapshot = await getDoc(topupRef);
-
-            if (!topupSnapshot.exists()) return;
-
-            const topup = topupSnapshot.data();
-
-            if (topup.status !== 'pending') return;
-
-            await updateDoc(topupRef, { status: status });
+            const ref = doc(db, 'Topups', topupId), snapshot = await getDoc(ref);
+            if (!snapshot.exists() || snapshot.data().status !== 'pending') return;
+            await updateDoc(ref, { status });
         } catch (error) {
             console.log('Error updating payment:', error);
         }
@@ -75,37 +56,22 @@ const Wallet = () => {
 
     const loadData = async () => {
         setLoading(true);
-
         try {
             if (learnerEmail) {
-                const learnerSnapshot = await getDocs(query(collection(db, 'Learner'), where('Email', '==', learnerEmail)));
+                const learner = await getDocs(query(collection(db, 'Learner'), where('Email', '==', learnerEmail)));
 
-                if (!learnerSnapshot.empty) {
-                    const learner = learnerSnapshot.docs[0].data();
-
-                    if (learner.creditBalance === undefined || learner.creditBalance === null) {
-                        setBalance(500);
-                    } else {
-                        setBalance(learner.creditBalance);
-                    }
+                if (!learner.empty) {
+                    const data = learner.docs[0].data();
+                    setBalance(data.creditBalance === undefined || data.creditBalance === null ? 500 : data.creditBalance);
                 }
 
-                const topupSnapshot = await getDocs(query(collection(db, 'Topups'), where('learnerEmail', '==', learnerEmail)));
-                const topupList = [];
+                const snapshot = await getDocs(query(collection(db, 'Topups'), where('learnerEmail', '==', learnerEmail)));
+                const list = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
 
-                for (const item of topupSnapshot.docs) {
-                    topupList.push({ id: item.id, ...item.data() });
-                }
+                list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-                topupList.sort((a, b) => {
-                    const firstTime = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
-                    const secondTime = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
-                    return secondTime - firstTime;
-                });
-
-                for (const topup of topupList) {
-                    if (topup.status !== 'pending') continue;
-                    if (!topup.dodoSessionId) continue;
+                for (const topup of list) {
+                    if (topup.status !== 'pending' || !topup.dodoSessionId) continue;
 
                     try {
                         const response = await verifyTopup({ sessionId: topup.dodoSessionId });
@@ -125,40 +91,26 @@ const Wallet = () => {
                     }
                 }
 
-                setTopups(topupList);
+                setTopups(list);
             }
         } catch (error) {
             console.log('Error loading wallet:', error);
         }
-
         setLoading(false);
     };
 
-    useEffect(() => {
-        loadData();
-
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
-    }, []);
-
     const startPolling = (sessionId, topupId, credits) => {
         if (pollRef.current) clearInterval(pollRef.current);
-
         let attempts = 0;
 
         pollRef.current = setInterval(async () => {
             attempts++;
-
             try {
-                const response = await verifyTopup({ sessionId: sessionId });
-                const status = response.data.status;
+                const response = await verifyTopup({ sessionId }), status = response.data.status;
 
                 if (status === 'succeeded') {
                     clearInterval(pollRef.current);
-
                     await markSucceeded(topupId, credits);
-
                     setPollStatus('Payment received. Credits added to your balance.');
                     setPaying(null);
                     loadData();
@@ -166,14 +118,12 @@ const Wallet = () => {
 
                 if (status === 'failed' || status === 'cancelled') {
                     clearInterval(pollRef.current);
-
                     await markFailed(topupId, status);
-
                     setPollStatus('Payment ' + status + '. No credits were added.');
                     setPaying(null);
                 }
 
-                if (status !== 'succeeded' && status !== 'failed' && status !== 'cancelled') {
+                if (!['succeeded', 'failed', 'cancelled'].includes(status)) {
                     setPollStatus('Waiting for payment to be confirmed...');
                 }
             } catch (error) {
@@ -198,35 +148,14 @@ const Wallet = () => {
         setPollStatus('Creating your payment link...');
 
         try {
-            const response = await createTopup({
-                learnerEmail: learnerEmail,
-                learnerName: learnerName,
-                amountINR: amountINR,
-                returnUrl: window.location.origin + '/learner/wallet'
-            });
+            const response = await createTopup({ learnerEmail, learnerName, amountINR, returnUrl: window.location.origin + '/learner/wallet' });
+            const { checkoutUrl, sessionId, credits } = response.data;
 
-            const checkoutUrl = response.data.checkoutUrl;
-            const sessionId = response.data.sessionId;
-            const credits = response.data.credits;
-
-            const topupData = {
-                learnerEmail: learnerEmail,
-                learnerName: learnerName,
-                amountINR: amountINR,
-                credits: credits,
-                status: 'pending',
-                dodoSessionId: sessionId,
-                checkoutUrl: checkoutUrl,
-                createdAt: serverTimestamp()
-            };
-
-            const topup = await addDoc(collection(db, 'Topups'), topupData);
+            const topup = await addDoc(collection(db, 'Topups'), { learnerEmail, learnerName, amountINR, credits, status: 'pending', dodoSessionId: sessionId, checkoutUrl, createdAt: serverTimestamp() });
 
             window.open(checkoutUrl, '_blank');
-
-            setPaying({ topupId: topup.id, sessionId: sessionId, credits: credits });
+            setPaying({ topupId: topup.id, sessionId, credits });
             setPollStatus('Complete the payment in the opened tab, then wait a few seconds.');
-
             startPolling(sessionId, topup.id, credits);
         } catch (error) {
             console.log('Payment error:', error);
@@ -239,7 +168,6 @@ const Wallet = () => {
 
     const handleCheckAgain = async () => {
         if (!paying) return;
-
         setPollStatus('Checking payment status...');
 
         try {
@@ -269,23 +197,16 @@ const Wallet = () => {
         }
     };
 
-    const statusPill = (status) => {
+    const statusPill = status => {
         if (status === 'succeeded') return { text: 'Succeeded', color: '#16A34A', icon: <FaCheckCircle /> };
         if (status === 'failed') return { text: 'Failed', color: '#DC2626', icon: <FaTimesCircle /> };
         if (status === 'cancelled') return { text: 'Cancelled', color: '#7D716A', icon: <FaTimesCircle /> };
         return { text: 'Pending', color: '#D97706', icon: <FaClock /> };
     };
 
-    const formatDate = (timestamp) => {
-        if (!timestamp || !timestamp.seconds) return '—';
-
-        return new Date(timestamp.seconds * 1000).toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    const formatDate = timestamp => {
+        if (!timestamp?.seconds) return '—';
+        return new Date(timestamp.seconds * 1000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     return (
@@ -296,8 +217,7 @@ const Wallet = () => {
                 <div style={contentStyle}>
                     <div style={headingStyle}>
                         <div style={{ marginLeft: 30, margin: 3, display: 'flex', alignItems: 'center' }}>
-                            <FaWallet style={{ marginRight: 10, color: '#5813EA' }} />
-                            My Wallet
+                            <FaWallet style={{ marginRight: 10, color: '#5813EA' }} /> My Wallet
                         </div>
                     </div>
 
@@ -309,17 +229,13 @@ const Wallet = () => {
                                 <div style={glowStyle} />
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
-                                    <div style={walletIconWrap}>
-                                        <FaWallet style={{ fontSize: 16, color: '#C7B9FF' }} />
-                                    </div>
+                                    <div style={walletIconWrap}><FaWallet style={{ fontSize: 16, color: '#C7B9FF' }} /></div>
                                     <span style={{ fontSize: 12, letterSpacing: '0.6px', color: '#B7A9E8', textTransform: 'uppercase' }}>Credit Balance</span>
                                 </div>
 
-                                <div style={{ fontSize: 44, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, marginTop: 10, position: 'relative' }}>
-                                    ₹ {balance}
-                                </div>
+                                <div style={{ fontSize: 44, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, marginTop: 10, position: 'relative' }}>₹ {balance}</div>
 
-                                <div style={{ fontSize: 13, color: '#B7A9E8', marginTop: 6, position: 'relative',fontFamily:'DMM' }}>
+                                <div style={{ fontSize: 13, color: '#B7A9E8', marginTop: 6, position: 'relative', fontFamily: 'DMM' }}>
                                     1 credit = ₹1 · ₹50 charged per 30 min session
                                 </div>
                             </div>
@@ -330,14 +246,17 @@ const Wallet = () => {
                                     <span style={{ fontSize: 14, color: '#4d5057' }}>Top up credits</span>
 
                                     <div style={dodoBadge}>
-                                        <FaShieldAlt style={{ fontSize: 16 }} />
-                                        Dodo Payments
+                                        <FaShieldAlt style={{ fontSize: 16 }} /> Dodo Payments
                                     </div>
                                 </div>
 
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
-                                    {TOPUP_OPTIONS.map((option) => (
-                                        <button key={option} onClick={() => setAmountINR(option)} style={{ ...amountButtonStyle, backgroundColor: amountINR === option ? '#5813EA' : 'white', color: amountINR === option ? 'white' : '#374151', borderColor: amountINR === option ? '#5813EA' : '#E5E7EB' }}>
+                                    {TOPUP_OPTIONS.map(option => (
+                                        <button
+                                            key={option}
+                                            onClick={() => setAmountINR(option)}
+                                            style={{ ...amountButtonStyle, backgroundColor: amountINR === option ? '#5813EA' : 'white', color: amountINR === option ? 'white' : '#374151', borderColor: amountINR === option ? '#5813EA' : '#E5E7EB' }}
+                                        >
                                             <span style={{ fontSize: 16 }}>₹{option}</span>
                                             <span style={{ fontSize: 11, opacity: 0.75 }}>{option} credits</span>
                                         </button>
@@ -349,13 +268,21 @@ const Wallet = () => {
                                     <FaArrowRight style={{ marginLeft: 8, fontSize: 12 }} />
                                 </button>
 
-                                <div style={{display:'flex',alignItems:'center',gap:8,...testModeRow}}>
-  <FaWallet style={{fontSize:15,color:'#7C3AED'}}/>
-  <div>
-    <div style={{fontSize:14}}>Use <b>Test</b> Card :  <span style={{fontSize:15,color:"#059669",letterSpacing:1}}><b onClick={()=>navigator.clipboard.writeText('4576 2389 1277 1450')} style={{cursor:'pointer'}}>4576 2389 1277 1450</b></span></div>
-    <div style={{display:'flex',gap:14,fontSize:14,color:'#010714'}}><span >Date : <span style={{fontSize:15,color:"#059669",letterSpacing:1}}><b>06/32</b></span> </span><span>CVV: <span style={{fontSize:15,color:"#059669",letterSpacing:1}}><b>123</b></span></span></div>
-  </div>
-</div>
+                                <div style={testModeRow}>
+                                    <FaWallet style={{ fontSize: 15, color: '#7C3AED' }} />
+                                    <div>
+                                        <div style={{ fontSize: 14 }}>
+                                            Use <b>Test</b> Card : <span style={{ fontSize: 15, color: "#059669", letterSpacing: 1 }}>
+                                                <b onClick={() => navigator.clipboard.writeText('4576 2389 1277 1450')} style={{ cursor: 'pointer' }}>4576 2389 1277 1450</b>
+                                            </span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: 14, fontSize: 14, color: '#010714' }}>
+                                            <span>Date : <span style={{ fontSize: 15, color: '#059669', letterSpacing: 1 }}><b>06/32</b></span></span>
+                                            <span>CVV: <span style={{ fontSize: 15, color: '#059669', letterSpacing: 1 }}><b>123</b></span></span>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {error && <div style={{ color: '#DC2626', marginTop: 12, fontSize: 13 }}>{error}</div>}
                                 {pollStatus && <div style={{ color: '#5813EA', marginTop: 12, fontSize: 13 }}>{pollStatus}</div>}
@@ -379,28 +306,32 @@ const Wallet = () => {
                             <div style={{ color: '#9CA3AF', marginTop: 10, fontSize: 13 }}>No top ups yet.</div>
                         ) : (
                             <div style={{ marginTop: 14 }}>
-                                {topups.map((topup) => {
-                                    const pill = statusPill(topup.status);
-                                    let pillBg = '#FEF3C7';
-                                    let pillColor = '#D97706';
+                                {topups.map(topup => {
+        const pill = statusPill(topup.status);
+        let pillBg = '#FEF3C7', pillColor = '#D97706';
 
-                                    if (topup.status === 'succeeded') {
-                                        pillBg = '#ECFDF5';
-                                        pillColor = '#059669';
-                                    }
+        if (topup.status === 'succeeded') {
+            pillBg = '#ECFDF5';
+            pillColor = '#059669';
+        }
 
-                                    if (topup.status === 'failed') {
-                                        pillBg = '#FEF2F2';
-                                        pillColor = '#DC2626';
-                                    }
+        if (topup.status === 'failed') {
+            pillBg = '#FEF2F2';
+            pillColor = '#DC2626';
+        }
 
-                                    if (topup.status === 'cancelled') {
-                                        pillBg = '#F3F4F6';
-                                        pillColor = '#6B7280';
-                                    }
+        if (topup.status === 'cancelled') {
+            pillBg = '#F3F4F6';
+            pillColor = '#6B7280';
+        }
 
                                     return (
-                                        <div key={topup.id} style={historyRowStyle} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}>
+                                        <div
+                                            key={topup.id}
+                                            style={historyRowStyle}
+                                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FAFAFA'}
+                                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'white'}
+                                        >
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                 <span style={{ fontSize: 14, color: '#111827' }}>₹{topup.amountINR} · {topup.credits} credits</span>
                                                 <span style={{ fontSize: 12, color: '#9CA3AF' }}>{formatDate(topup.createdAt)}</span>
@@ -422,8 +353,8 @@ const Wallet = () => {
 };
 
 const homeStyle = {
-    width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center',
-    padding: 20, backgroundColor: '#5813ea',
+    width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', padding: 20,
+    backgroundColor: '#5813ea',
     background: `repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(255, 133, 244, 0.8) 50px, rgba(66, 133, 244, 0.8) 51px), repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(66, 133, 244, 0.8) 50px, rgba(66, 133, 244, 0.8) 51px), #5813ea`,
     boxSizing: 'border-box'
 };
@@ -471,7 +402,11 @@ const payButtonStyle = {
     transition: 'background-color 0.15s ease', fontWeight: 'bold'
 };
 
-const testModeRow={display:'flex',alignItems:'center',gap:8,fontSize:15,color:'#1F2937',background:'#F8F7FF',border:'1px solid #C4B5FD',borderRadius:8,padding:'7px 11px',fontWeight:500,fontFamily:'DMM',marginTop:10};
+const testModeRow = {
+    display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, color: '#1F2937',
+    background: '#F8F7FF', border: '1px solid #C4B5FD', borderRadius: 8,
+    padding: '7px 11px', fontWeight: 500, fontFamily: 'DMM', marginTop: 10
+};
 
 const checkAgainStyle = {
     fontFamily: 'DMM', fontSize: 13, color: '#5813EA', backgroundColor: 'white',
@@ -480,7 +415,7 @@ const checkAgainStyle = {
 };
 
 const historyHeaderRow = {
-    display: 'flex', alignItems: 'center', marginTop: 32,fontFamily:'DMM'
+    display: 'flex', alignItems: 'center', marginTop: 32, fontFamily: 'DMM'
 };
 
 const historyRowStyle = {
@@ -491,7 +426,7 @@ const historyRowStyle = {
 
 const statusPillStyle = {
     display: 'flex', alignItems: 'center', gap: 6, border: 'none',
-    borderRadius: 100, padding: '4px 12px', fontSize: 12, fontWeight: 600,
+    borderRadius: 100, padding: '4px 12px', fontSize: 12, fontWeight: 600
 };
 
 export default Wallet;
